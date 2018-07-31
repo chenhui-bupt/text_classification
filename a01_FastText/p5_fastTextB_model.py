@@ -8,7 +8,7 @@ class fastTextB:
     def __init__(self, label_size, learning_rate, batch_size, decay_steps, decay_rate,num_sampled,sentence_len,vocab_size,embed_size,is_training):
         """init all hyperparameter here"""
         # set hyperparamter
-        self.label_size = label_size
+        self.label_size = label_size  # 多标签分类，num_classes
         self.batch_size = batch_size
         self.num_sampled = num_sampled
         self.sentence_len=sentence_len
@@ -40,19 +40,20 @@ class fastTextB:
     def instantiate_weights(self):
         """define all weights here"""
         # embedding matrix
-        self.Embedding = tf.get_variable("Embedding", [self.vocab_size, self.embed_size])
-        self.W = tf.get_variable("W", [self.embed_size, self.label_size])
+        self.Embedding = tf.get_variable("Embedding", [self.vocab_size, self.embed_size])  # embedding初始化
+        self.W = tf.get_variable("W", [self.embed_size, self.label_size])  # 网络就一层，很直接
         self.b = tf.get_variable("b", [self.label_size])
 
     def inference(self):
         """main computation graph here: 1.embedding-->2.average-->3.linear classifier"""
         # 1.get emebedding of words in the sentence
         sentence_embeddings = tf.nn.embedding_lookup(self.Embedding,self.sentence)  # [None,self.sentence_len,self.embed_size]
+        # 多出一个维度，即每个句子中每个词的词向量，[None, sentence_len, embed_size]
 
-        # 2.average vectors, to get representation of the sentence
+        # 2.average vectors, to get representation of the sentence 得到句子的embedding向量，向量大小与词向量一致
         self.sentence_embeddings = tf.reduce_mean(sentence_embeddings, axis=1)  # [None,self.embed_size]
 
-        # 3.linear classifier layer
+        # 3.linear classifier layer 直接得到输出概率值
         logits = tf.matmul(self.sentence_embeddings, self.W) + self.b #[None, self.label_size]==tf.matmul([None,self.embed_size],[self.embed_size,self.label_size])
         return logits
 
@@ -74,7 +75,7 @@ class fastTextB:
         else:#eval/inference
             #logits = tf.matmul(self.sentence_embeddings, tf.transpose(self.W)) #matmul([None,self.embed_size])--->
             #logits = tf.nn.bias_add(logits, self.b)
-            labels_one_hot = tf.one_hot(self.labels, self.label_size) #[batch_size]---->[batch_size,label_size]
+            labels_one_hot = tf.one_hot(self.labels, self.label_size) #[batch_size]---->[batch_size,label_size] 独热编码
             #sigmoid_cross_entropy_with_logits:Computes sigmoid cross entropy given `logits`.Measures the probability error in discrete classification tasks in which each class is independent and not mutually exclusive.  For instance, one could perform multilabel classification where a picture can contain both an elephant and a dog at the same time.
             loss = tf.nn.sigmoid_cross_entropy_with_logits(labels=labels_one_hot,logits=self.logits) #labels:[batch_size,label_size];logits:[batch, label_size]
             print("loss0:", loss) #shape=(?, 1999)

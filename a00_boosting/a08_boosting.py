@@ -1,11 +1,12 @@
 # -*- coding: utf-8 -*-
 import sys
-reload(sys)
-sys.setdefaultencoding('utf8')
+# reload(sys)
+# sys.setdefaultencoding('utf8')
 import tensorflow as tf
+import numpy as np
 
 #main process for boosting:
-#1.compute label weight after each epoch using validation data.
+#1.compute label weight after each epoch using validation data.  计算类别权重
 #2.get weights for each batch during traininig process
 #3.compute loss using cross entropy with weights
 
@@ -25,15 +26,15 @@ def compute_labels_weights(weights_label,logits,labels):
         weight=weights_label.get(label,None)
         if weight==None:
             if label_predict == label:
-                weights_label[label]=(1,1)
+                weights_label[label]=(1,1)  # predict correct
             else:
-                weights_label[label]=(1,0)
+                weights_label[label]=(1,0)  # predict incorrect
         else:
             number=weight[0]
             correct=weight[1]
-            number=number+1
+            number=number+1  # 记录类别标签的样本数
             if label_predict==label:
-                correct=correct+1
+                correct=correct+1  # 记录该类别分类正确的样本数，以便对类别做权重
             weights_label[label]=(number,correct)
     return weights_label
 
@@ -49,14 +50,14 @@ def get_weights_for_current_batch(answer_list,weights_dict):
     answer_list=list(answer_list)
     for i,label in enumerate(answer_list):
         acc=weights_dict[label]
-        weights_list_batch[i]=min(1.5,1.0/(acc+0.001))
+        weights_list_batch[i]=min(1.5,1.0/(acc+0.001))  # 样本类别权重->得到样本权重，权重上限1.5
     #if np.random.choice(200)==0: #print something from time to time
     #    print("weights_list_batch:",weights_list_batch)
     return weights_list_batch
 
 #3.compute loss using cross entropy with weights
 def loss(logits,labels,weights):
-    loss= tf.losses.sparse_softmax_cross_entropy(labels, logits,weights=weights)
+    loss= tf.losses.sparse_softmax_cross_entropy(labels, logits,weights=weights)  # 带权重的损失函数（解决欠拟合问题）
     return loss
 
 #######################################################################
@@ -65,5 +66,5 @@ def get_weights_label_as_standard_dict(weights_label):
     weights_dict = {}
     for k,v in weights_label.items():
         count,correct=v
-        weights_dict[k]=float(correct)/float(count)
+        weights_dict[k]=float(correct)/float(count)  # 类别权重=类别分类正确数/类别的样本数
     return weights_dict
